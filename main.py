@@ -17,8 +17,8 @@ x_goal = [5, 0]
 m = gp.Model("NMPC")
 
 x = m.addVars(T+1, nxu, lb=-5, ub=5, name="pos")
-x_bar = m.addVars(T, nxu, lb=-10, ub=10, name="x_bar")
-u = m.addVars(T, nxu, lb=-1, ub=1, name="u")
+x_bar = m.addVars(T +1, nxu, lb=-10, ub=10, name="x_bar")
+u = m.addVars(T, nxu, lb=-2, ub=2, name="u")
 lam = m.addVars(T, nlam, lb=0, name='Lambda')
 mu = m.addVars(T, nxu, name='mu')
 
