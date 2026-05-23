@@ -59,53 +59,60 @@ m.optimize()
 
 if m.status == gp.GRB.OPTIMAL:
     print("Ótimo encontrado")
+    # Criamos a lista completa com todos os pontos
+    todos_pontos = [x_init] + [[x[k, 0].X, x[k, 1].X] for k in range(T)]
+
+    # Imprimimos formatado de P0 até P10
+    for i, ponto in enumerate(todos_pontos):
+        print(f"P{i} = [{ponto[0]:.2f}, {ponto[1]:.2f}]")
+
+    x_traj = []
+    x_traj.append(x_init)
+    x_traj.extend([x[k, 0].X, x[k, 1].X] for k in range(T))
+
+    x_traj = np.array(x_traj)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    ax.plot(
+        x_traj[:, 0],
+        x_traj[:, 1],
+        'bo-',
+        linewidth=2,
+        label='Trajetória'
+    )
+
+    ax.plot(
+        x_init[0],
+        x_init[1],
+        'gs',
+        markersize=10,
+        label='Inicial'
+    )
+
+    ax.plot(
+        x_goal[0],
+        x_goal[1],
+        'rs',
+        markersize=10,
+        label='Objetivo'
+    )
+
+    square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red')
+    ax.add_patch(square)
+    plt.gca().set_aspect('equal', adjustable='box')  # Ensures equal aspect ratio
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+
+    ax.set_title('Trajetória ótima')
+
+    ax.grid(True)
+    ax.axis('equal')
+    ax.legend()
+
+    plt.show()
 else:
     print("Status:", m.status)
 
 
-x_traj = []
-x_traj.append(x_init)
-x_traj.extend([x[k,0].X, x[k,1].X] for k in range(T))
-
-x_traj = np.array(x_traj)
-
-fig , ax = plt.subplots(figsize=(8,8))
-
-ax.plot(
-    x_traj[:,0],
-    x_traj[:,1],
-    'bo-',
-    linewidth=2,
-    label='Trajetória'
-)
-
-ax.plot(
-    x_init[0],
-    x_init[1],
-    'gs',
-    markersize=10,
-    label='Inicial'
-)
-
-ax.plot(
-    x_goal[0],
-    x_goal[1],
-    'rs',
-    markersize=10,
-    label='Objetivo'
-)
-
-square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red')
-ax.add_patch(square)
-plt.gca().set_aspect('equal', adjustable='box')  # Ensures equal aspect ratio
-
-ax.set_xlabel('x')
-ax.set_ylabel('y')
-
-ax.set_title('Trajetória ótima')
-
-ax.grid(True)
-ax.axis('equal')
-ax.legend()
-
-plt.show()
