@@ -61,10 +61,12 @@ if m.status == gp.GRB.OPTIMAL:
 else:
     print("Status:", m.status)
 
-x_traj = np.array([
-    [x[k,0].X, x[k,1].X]
-    for k in range(T)
-])
+
+x_traj = []
+x_traj.append(x_init)
+x_traj.extend([x[k,0].X, x[k,1].X] for k in range(T))
+
+x_traj = np.array(x_traj)
 
 plt.figure(figsize=(7,7))
 
