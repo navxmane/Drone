@@ -1,6 +1,7 @@
 import gurobipy as gp
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import patches
 
 T = 10
 nxu = 2
@@ -68,9 +69,9 @@ x_traj.extend([x[k,0].X, x[k,1].X] for k in range(T))
 
 x_traj = np.array(x_traj)
 
-plt.figure(figsize=(7,7))
+fig , ax = plt.subplots(figsize=(8,8))
 
-plt.plot(
+ax.plot(
     x_traj[:,0],
     x_traj[:,1],
     'bo-',
@@ -78,7 +79,7 @@ plt.plot(
     label='Trajetória'
 )
 
-plt.plot(
+ax.plot(
     x_init[0],
     x_init[1],
     'gs',
@@ -86,7 +87,7 @@ plt.plot(
     label='Inicial'
 )
 
-plt.plot(
+ax.plot(
     x_goal[0],
     x_goal[1],
     'rs',
@@ -94,13 +95,17 @@ plt.plot(
     label='Objetivo'
 )
 
-plt.xlabel('x')
-plt.ylabel('y')
+square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red')
+ax.add_patch(square)
+plt.gca().set_aspect('equal', adjustable='box')  # Ensures equal aspect ratio
 
-plt.title('Trajetória ótima')
+ax.set_xlabel('x')
+ax.set_ylabel('y')
 
-plt.grid(True)
-plt.axis('equal')
-plt.legend()
+ax.set_title('Trajetória ótima')
+
+ax.grid(True)
+ax.axis('equal')
+ax.legend()
 
 plt.show()
