@@ -2,6 +2,8 @@ import gurobipy as gp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
+import random
+import pandas as pd
 
 #Parametros
 T = 10
