@@ -44,6 +44,7 @@ def MPC(x_init):
     #Função objetivo
     obj = gp.quicksum(P[i,i] * x_bar[k,i]**2 for k in range(T) for i in range(nxu)) + gp.quicksum(Q[i,i] * u[k, i]**2 for k in range(T) for i in range(nxu))
     m.setObjective(obj, sense=gp.GRB.MINIMIZE)
+
     #=========================================================
     #Restrições
     #=========================================================
@@ -76,7 +77,7 @@ def MPC(x_init):
     m.optimize()
 
     #====================================================================
-    #Plotagem se o modelo é ótimo
+    #Plotagem se ótimo é encontrado
     #====================================================================
     if m.status == gp.GRB.OPTIMAL:
         print("Ótimo encontrado")
