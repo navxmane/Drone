@@ -138,4 +138,7 @@ def MPC(x_init):
 
 estados, acoes = MPC(xi)
 dados_da_sim = np.hstack((estados[:-1], acoes))
+ds = pd.DataFrame(dados_da_sim, columns=['x1', 'x2', 'u1', 'u2'])
+ds.to_csv(index= False)
+
 
