@@ -1,3 +1,4 @@
+#%%
 import gurobipy as gp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -133,10 +134,4 @@ if m.status == gp.GRB.OPTIMAL:
 else:
     print("Status:", m.status)
 
-
-
-
-
-
-
-
+# %%
