@@ -5,17 +5,17 @@ import matplotlib.pyplot as plt
 from matplotlib import patches
 import random
 import pandas as pd
-# %%
+
 def checa(A, b, x):
     return np.all(A @ x <= b)
-# %%
+
 def MPC(x_init):
     #Modelo
     m = gp.Model("NMPC")
     m.setParam("NonConvex", 2)
 
     #Variáveis
-    x = m.addVars(T, nxu, lb=-6, ub=6, name="pos")
+    x = m.addVars(T, nxu, lb=-16, ub=16, name="pos")
     x_bar = m.addVars(T, nxu, lb=-20, ub=20, name="x_bar")
     u = m.addVars(T, nxu, lb=-1, ub=1, name="u")
     lam = m.addVars(T, nlam, lb=0, name='Lambda')
@@ -71,6 +71,8 @@ def MPC(x_init):
         x_traj = np.array(todos_pontos)
         u_traj = [[u[k, 0].X, u[k,1].X] for k in range(T)]
 
+        return x_traj, u_traj
+
         fig, ax = plt.subplots(figsize=(8, 8))
 
         ax.plot(
@@ -111,16 +113,22 @@ def MPC(x_init):
         ax.legend()
 
         plt.show()
+
+
     else:
         print("Status:", m.status)
+        return None, None
 
-    return x_traj, u_traj
 
-# %%
+
+
 #Parametros
 T = 10
 nxu = 2
 nlam = 4
+num_rept = 5
+
+
 
 #Matrizes multiplicadoras
 P = np.eye(nxu)
@@ -135,28 +143,29 @@ A = np.array([
 ])
 b = np.array([1,1,1,1])
 
-dataset_completp = []
+# Lista para armazenamento das trajetórias
+dataset_completo = []
 
 #Pontos de interesse
 # x_init = [-5, 0]
 x_goal = [5, 0]
 
+for n in range(num_rept):   
+    while True:
+        x1 = random.uniform(x_goal[0] - T, x_goal[0] + T)
+        x2 = random.uniform(x_goal[1] - T, x_goal[1] + T)
+        x_test = np.array([x1, x2])
+        if not checa(A, b, x_test):
+            x_init = x_test
+            print(f'Funcionou {x1}, {x2}')   
+            break
 
+    estados, acoes = MPC(x_init)
+    dados_da_sim = np.hstack((estados[:-1], acoes))
+    dataset_completo.append(dados_da_sim)
+    
 
-while True:
-    x1 = random.uniform(x_goal[0] - T, x_goal[0] + T)
-    x2 = random.uniform(x_goal[1] - T, x_goal[1] + T)
-    x_test = np.array([x1, x2])
-    if not checa(A, b, x_test):
-        x_init = x_test
-        print(f'Funcionou {x1}, {x2}')
-        break
-
-# %%
-
-
-estados, acoes = MPC(x_init)
-dados_da_sim = np.hstack((estados[:-1], acoes))
-ds = pd.DataFrame(dados_da_sim, columns=['x1', 'x2', 'u1', 'u2'])
-ds.to_csv(index= False)
+dataset_completo = np.vstack(dataset_completo)
+ds = pd.DataFrame(dataset_completo, columns=['x1', 'x2', 'u1', 'u2'])
+ds.to_csv("dataset.csv", index= False)
 
