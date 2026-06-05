@@ -1,34 +1,14 @@
+# %%
 import gurobipy as gp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import random
 import pandas as pd
-
-#Parametros
-T = 10
-nxu = 2
-nlam = 4
-
-#Matrizes multiplicadoras
-P = np.eye(nxu)
-Q = np.eye(nxu)
-
-#Obstáculo
-A = np.array([
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1]
-])
-b = np.array([1,1,1,1])
-
-dataset_completp = []
-
-#Pontos de interesse
-xi = [-5, 0]
-x_goal = [5, 0]
-
+# %%
+def checa(A, b, x):
+    return np.all(A @ x <= b)
+# %%
 def MPC(x_init):
     #Modelo
     m = gp.Model("NMPC")
@@ -52,7 +32,7 @@ def MPC(x_init):
     #Pontos inicial e terminal
     for i in range(nxu):
         m.addConstr(x[0,i] == x_init[i] + u[0,i])
-        m.addConstr(x[T-1, i] == x_goal[i])
+        # m.addConstr(x[T-1, i] == x_goal[i])
 
     #x_bark = xk - x_goal
     for k in range(T):
@@ -136,9 +116,47 @@ def MPC(x_init):
 
     return x_traj, u_traj
 
-estados, acoes = MPC(xi)
+# %%
+#Parametros
+T = 10
+nxu = 2
+nlam = 4
+
+#Matrizes multiplicadoras
+P = np.eye(nxu)
+Q = np.eye(nxu)
+
+#Obstáculo
+A = np.array([
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+])
+b = np.array([1,1,1,1])
+
+dataset_completp = []
+
+#Pontos de interesse
+# x_init = [-5, 0]
+x_goal = [5, 0]
+
+
+
+while True:
+    x1 = random.uniform(x_goal[0] - T, x_goal[0] + T)
+    x2 = random.uniform(x_goal[1] - T, x_goal[1] + T)
+    x_test = np.array([x1, x2])
+    if not checa(A, b, x_test):
+        x_init = x_test
+        print(f'Funcionou {x1}, {x2}')
+        break
+
+# %%
+
+
+estados, acoes = MPC(x_init)
 dados_da_sim = np.hstack((estados[:-1], acoes))
 ds = pd.DataFrame(dados_da_sim, columns=['x1', 'x2', 'u1', 'u2'])
 ds.to_csv(index= False)
-
 
