@@ -12,8 +12,8 @@ nxu = 2
 nlam = 4
 
 #Matrizes multiplicadoras
-P = np.eye(nxu)
-Q = np.eye(nxu)
+P = 10
+Q = 1
 
 #Obstáculo
 A = np.array([
@@ -42,7 +42,7 @@ lam = m.addVars(T, nlam, lb=0, name='Lambda')
 mu = m.addVars(T, nxu, name='mu')
 
 #Função objetivo
-obj = gp.quicksum(P[i,i] * x_bar[k,i]**2 for k in range(T) for i in range(nxu)) + gp.quicksum(Q[i,i] * u[k, i]**2 for k in range(T) for i in range(nxu))
+obj = gp.quicksum(P * x_bar[k,i]**2 for k in range(T) for i in range(nxu)) + gp.quicksum(Q * u[k, i]**2 for k in range(T) for i in range(nxu))
 m.setObjective(obj, sense=gp.GRB.MINIMIZE)
 
 #=========================================================
@@ -52,7 +52,7 @@ m.setObjective(obj, sense=gp.GRB.MINIMIZE)
 #Pontos inicial e terminal
 for i in range(nxu):
     m.addConstr(x[0,i] == x_init[i] + u[0,i])
-    m.addConstr(x[T-1, i] == x_goal[i])
+    # m.addConstr(x[T-1, i] == x_goal[i])
 
 #x_bark = xk - x_goal
 for k in range(T):
