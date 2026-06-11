@@ -36,6 +36,7 @@ m.setParam("NonConvex", 2)
 
 #Variáveis
 x = m.addVars(T, nxu, lb=-6, ub=6, name="pos")
+v = m.addVars(T, nxu, lb=-2, ub=2, name="speed")
 x_bar = m.addVars(T, nxu, lb=-20, ub=20, name="x_bar")
 u = m.addVars(T, nxu, lb=-1, ub=1, name="u")
 lam = m.addVars(T, nlam, lb=0, name='Lambda')
@@ -101,12 +102,21 @@ if m.status == gp.GRB.OPTIMAL:
         label='Trajetória'
     )
 
-    square_init = patches.Rectangle((-5.25, -0.25), 0.5, 0.5, edgecolor='black', facecolor='green')
-    ax.add_patch(square_init)
-  
+    ax.plot(
+        x_init[0],
+        x_init[1],
+        'gs',
+        markersize=10,
+        label='Inicial'
+    )
 
-    square_goal = patches.Rectangle((4.75, -0.25), 0.5, 0.5, edgecolor='black', facecolor='yellow')
-    ax.add_patch(square_goal)
+    ax.plot(
+        x_goal[0],
+        x_goal[1],
+        'rs',
+        markersize=10,
+        label='Objetivo'
+    )
 
     square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red')
     ax.add_patch(square)
