@@ -10,6 +10,7 @@ import pandas as pd
 T = 10
 nxu = 2
 nlam = 4
+dt = 1
 
 #Matrizes multiplicadoras
 P = 50
@@ -54,6 +55,7 @@ m.setObjective(obj, sense=gp.GRB.MINIMIZE)
 for i in range(nxu):
     m.addConstr(x[0,i] == x_init[i] + u[0,i])
     # m.addConstr(x[T-1, i] == x_goal[i])
+    m.addConstr(v[T-1, i] == 0)
 
 #x_bark = xk - x_goal
 for k in range(T):
@@ -63,7 +65,8 @@ for k in range(T):
 #xk+1 = xk + uk
 for k in range(1, T):
     for i in range(nxu):
-        m.addConstr(x[k, i] == x[k-1,i] + u[k, i])
+        m.addConstr(x[k, i] == x[k-1,i] + v[k, i] * dt)
+        m.addConstr(v[k,i] == v[k-1,i] + u[k,i])
 
 #Lambdak * b - mukk * xk >= 0
     m.addConstr(-gp.quicksum(lam[k, l] * b[l] for l in range(nlam) ) + gp.quicksum(mu[k, i] * x[k, i]  for i in range(nxu)) >= 1)
@@ -84,10 +87,14 @@ if m.status == gp.GRB.OPTIMAL:
     print("Ótimo encontrado")
     # Criamos a lista completa com todos os pontos
     todos_pontos = [x_init] + [[x[k, 0].X, x[k, 1].X] for k in range(T)]
+    tout_vitase = [[v[k,0].X, v[k,1].X] for  k in range(T)]
 
     # Imprimimos formatado de P0 até P10
     for i, ponto in enumerate(todos_pontos):
         print(f"P{i} = [{ponto[0]:.2f}, {ponto[1]:.2f}]")
+
+    for i, vitase in enumerate(tout_vitase):
+        print(f"V{i} = [{vitase[0]:.2f}, {vitase[1]:.2f}]")
 
     x_traj = np.array(todos_pontos)
     u_traj = [[u[k, 0].X, u[k,1].X] for k in range(T)]
