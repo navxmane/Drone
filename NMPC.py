@@ -127,6 +127,7 @@ T = 10
 nxu = 2
 nlam = 4
 num_rept = 5
+k_pred = 5
 
 
 

@@ -92,9 +92,9 @@ if m.status == gp.GRB.OPTIMAL:
     # Imprimimos formatado de P0 até P10
     for i, ponto in enumerate(todos_pontos):
         print(f"P{i} = [{ponto[0]:.2f}, {ponto[1]:.2f}]")
-
+    print("=======================================================")
     for i, vitase in enumerate(tout_vitase):
-        print(f"V{i} = [{vitase[0]:.2f}, {vitase[1]:.2f}]")
+        print(f"V{i+1} = [{vitase[0]:.2f}, {vitase[1]:.2f}]")
 
     x_traj = np.array(todos_pontos)
     u_traj = [[u[k, 0].X, u[k,1].X] for k in range(T)]
