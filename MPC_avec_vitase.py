@@ -10,7 +10,7 @@ import pandas as pd
 T = 10
 nxu = 2
 nlam = 4
-dt = 1
+dt = 0.7
 
 #Matrizes multiplicadoras
 P = 50
@@ -66,7 +66,7 @@ for k in range(T):
 for k in range(1, T):
     for i in range(nxu):
         m.addConstr(x[k, i] == x[k-1,i] + v[k, i] * dt)
-        m.addConstr(v[k,i] == v[k-1,i] + u[k,i])
+        m.addConstr(v[k,i] == v[k-1,i] + u[k,i] * dt)
 
 #Lambdak * b - mukk * xk >= 0
     m.addConstr(-gp.quicksum(lam[k, l] * b[l] for l in range(nlam) ) + gp.quicksum(mu[k, i] * x[k, i]  for i in range(nxu)) >= 1)
