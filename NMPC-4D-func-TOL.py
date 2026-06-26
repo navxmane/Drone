@@ -1,3 +1,4 @@
+# %%
 import gurobipy as gp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,11 +53,11 @@ def MPC(x_init):
         for k in range(k_pred):
             # Integração da Dinâmica 4D (Duplo Integrador com DT)
             # Posição_futura = Posição_atual + Velocidade_atual * DT
-            m.addConstr(x[k + 1, 0] == x[k, 0] + x[k, 2] * DT)
-            m.addConstr(x[k + 1, 1] == x[k, 1] + x[k, 3] * DT)
+            m.addConstr(x[k + 1, 0] == x[k, 0] + x[k, 2] * dt)
+            m.addConstr(x[k + 1, 1] == x[k, 1] + x[k, 3] * dt)
             # Velocidade_futura = Velocidade_atual + Aceleração(u) * DT
-            m.addConstr(x[k + 1, 2] == x[k, 2] + u[k, 0] * DT)
-            m.addConstr(x[k + 1, 3] == x[k, 3] + u[k, 1] * DT)
+            m.addConstr(x[k + 1, 2] == x[k, 2] + u[k, 0] * dt)
+            m.addConstr(x[k + 1, 3] == x[k, 3] + u[k, 1] * dt)
             
             # Restrições KKT para evitar o obstáculo (baseado apenas na posição x[k, 0:2])
             m.addConstr(gp.quicksum(-lam[k, j] * b[j] for j in range(nlam)) + 
@@ -84,10 +85,10 @@ def MPC(x_init):
             u_traj_real[t, :] = u_aplicar
             
             # Evolução do sistema real com a dinâmica 4D
-            x_traj_real[t + 1, 0] = x_traj_real[t, 0] + x_traj_real[t, 2] * DT
-            x_traj_real[t + 1, 1] = x_traj_real[t, 1] + x_traj_real[t, 3] * DT
-            x_traj_real[t + 1, 2] = x_traj_real[t, 2] + u_aplicar[0] * DT
-            x_traj_real[t + 1, 3] = x_traj_real[t, 3] + u_aplicar[1] * DT
+            x_traj_real[t + 1, 0] = x_traj_real[t, 0] + x_traj_real[t, 2] * dt
+            x_traj_real[t + 1, 1] = x_traj_real[t, 1] + x_traj_real[t, 3] * dt
+            x_traj_real[t + 1, 2] = x_traj_real[t, 2] + u_aplicar[0] * dt
+            x_traj_real[t + 1, 3] = x_traj_real[t, 3] + u_aplicar[1] * dt
         else:
             print(f"Simulação falhou no passo {t} com status: {m.status}")
             return None, None, t
@@ -95,12 +96,12 @@ def MPC(x_init):
     return x_traj_real, u_traj_real, passos_executados
 
 # Configurações básicas adaptadas
-T = 60          # Horizonte total maior para a dinâmica 4D amortecer
-DT = 0.5        # Passo de tempo inserido
+T = 20       # Horizonte total maior para a dinâmica 4D amortecer
+dt = 0.5        # Passo de tempo inserido
 nx = 4          # Estado agora é 4D (Pos_X, Pos_Y, Vel_X, Vel_Y)
 nu = 2          # Controle é 2D (Accel_X, Accel_Y)
 nlam = 4        
-num_rept = 1    
+num_rept = 100   
 k_pred = 12     # Horizonte de predição do NMPC estendido
 
 P = 50
@@ -117,8 +118,8 @@ ultima_trajetoria_completa = None
 for n in range(num_rept):   
     while True:
         # Sorteia apenas posições iniciais fora do obstáculo
-        x1 = random.uniform(-5.5, -4.5)
-        x2 = random.uniform(-0.5, 0.5)
+        x1 = random.uniform(-6, -4)
+        x2 = random.uniform(-1, 1)
         if not checa(A, b, np.array([x1, x2])):
             # Inicia com posições sorteadas e velocidades zeradas [x1, x2, 0, 0]
             x_init = np.array([x1, x2, 0.0, 0.0])
