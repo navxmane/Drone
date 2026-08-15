@@ -124,7 +124,7 @@ b = np.array([1, 1, 1, 1])
 x_goal = np.array([5.0, 0.0, 0.0, 0.0])
 
 # Teste com posição inicial muito crítica
-x_init = np.array([-1.2, 0.0, 0.0, 0.0])
+x_init = np.array([-2.0, 0.0, 0.0, 0.0])
 print(f'Ponto inicial: [{x_init[0]:.2f}, {x_init[1]:.2f}]')   
 
 estados, acoes, passos = MPC(x_init)
@@ -134,16 +134,13 @@ if estados is not None:
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.plot(estados[:, 0], estados[:, 1], 'bo-', linewidth=2, label='Trajetória NMPC (com Slack)')
     ax.plot(estados[0, 0], estados[0, 1], 'gs', markersize=10, label='Inicial')
-    ax.plot(x_goal[0], x_goal[1], 'rs', markersize=10, label='Objetivo')
 
-    square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red', alpha=0.4, label='Obstáculo')
+    square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red', alpha=0.7, label='Obstáculo')
     ax.add_patch(square)
 
     square_goal = patches.Rectangle((4.75, -0.25), 0.5, 0.5, edgecolor='black', facecolor='yellow', label='Estado objetivo')
     ax.add_patch(square_goal)
     
-    square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red', label='Obstáculo')
-    ax.add_patch(square)
     plt.gca().set_aspect('equal', adjustable='box')  # Ensures equal aspect ratio
 
     ax.set_xlabel('Coordenada X')
