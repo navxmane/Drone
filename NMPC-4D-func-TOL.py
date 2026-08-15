@@ -3,7 +3,20 @@ import gurobipy as gp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
-import pandas as pd
+
+def get_p_obs(t_passo, dt, p0, vobs_ini, p_limit):
+    """Calcula a posição e velocidade do obstáculo considerando o rebate nos limites."""
+    p_atual = p0.copy().astype(float)
+    v_atual = vobs_ini.copy().astype(float)
+    
+    for _ in range(t_passo):
+        p_prox = p_atual + v_atual * dt
+        if np.linalg.norm(p_prox - p_limit) < 0.1 or np.linalg.norm(p_prox - p0) < 0.1:
+            v_atual = -v_atual
+            p_prox = p_atual + v_atual * dt
+        p_atual = p_prox
+        
+    return p_atual, v_atual
 
 def NMPC(x_init):
     x_traj_real = np.zeros((T + 1, nx))
@@ -13,10 +26,8 @@ def NMPC(x_init):
     passos_executados = T
 
     for t in range(T):
-        x_atual = x_traj_real[t, :]
+        x_atual = x_traj_real[t, :] 
 
-        p_obs_atual = p0 + vobs * t * dt 
-        
         # Critério de parada
         if np.linalg.norm(x_atual[0:2] - x_goal[0:2]) < 0.25 and np.linalg.norm(x_atual[2:4]) < 0.40:
             print(f"\n[SUCESSO] Alvo alcançado de forma estável no passo t={t}!")
@@ -29,27 +40,20 @@ def NMPC(x_init):
         m.setParam("OutputFlag", 0) 
         m.setParam("NonConvex", 2)
 
-        # Variáveis de decisão (Estados 4D e Controle 2D)
         x = m.addVars(k_pred + 1, nx, lb=-10, ub=10, name="pos")
         x_bar = m.addVars(k_pred + 1, nx, lb=-20, ub=20, name="x_bar")
         u = m.addVars(k_pred, nu, lb=-1.5, ub=1.5, name="u")
         
-        # Multiplicadores de Lagrange
         lam = m.addVars(k_pred, nlam, lb=0, name='Lambda')
         mu = m.addVars(k_pred, nu, lb=-gp.GRB.INFINITY, name='mu')
-
-        # 1. CRIAR VARIÁVEIS DE FOLGA (SLACK VARIABLES)
         s = m.addVars(k_pred, lb=0.0, ub=gp.GRB.INFINITY, name="slack")
 
-        # PESO DA PENALIZAÇÃO (Ex: 1e4 ou 1e5 para priorizar fortemente a evasão)
         W_slack = 1e5
-
-        # 2. FUNÇÃO OBJETIVO COM PENALIZAÇÃO QUADRÁTICA DA FOLGA
         P_term = 3.0 * P
         obj = (gp.quicksum(P * x_bar[k, i]**2 for k in range(1, k_pred) for i in range(nx)) +
                gp.quicksum(P_term * x_bar[k_pred, i]**2 for i in range(nx)) +
                gp.quicksum(Q * u[k, i]**2 for k in range(k_pred) for i in range(nu)) +
-               gp.quicksum(W_slack * s[k]**2 for k in range(k_pred))) # Penalização do Slack
+               gp.quicksum(W_slack * s[k]**2 for k in range(k_pred)))
         
         m.setObjective(obj, sense=gp.GRB.MINIMIZE)
 
@@ -57,17 +61,16 @@ def NMPC(x_init):
             m.addConstr(x[0, i] == x_atual[i])
 
         for k in range(k_pred):
-
-            p_obs_pred = p_obs_atual + vobs * k * dt
-
+            p_obs_pred, _ = get_p_obs(t + k, dt, p0, vobs, p_limit)
             bk = b0 + A @ p_obs_pred
+
             # Integração da Dinâmica 4D
             m.addConstr(x[k + 1, 0] == x[k, 0] + x[k, 2] * dt)
             m.addConstr(x[k + 1, 1] == x[k, 1] + x[k, 3] * dt)
             m.addConstr(x[k + 1, 2] == x[k, 2] + u[k, 0] * dt)
             m.addConstr(x[k + 1, 3] == x[k, 3] + u[k, 1] * dt)
             
-            # 3. RESTRIÇÃO KKT SUAVIZADA COM SLACK
+            # Restrição KKT Suavizada
             m.addConstr(gp.quicksum(-lam[k, j] * bk[j] for j in range(nlam)) + 
                         mu[k, 0] * x[k, 0] + mu[k, 1] * x[k, 1] + s[k] >= 1)
 
@@ -80,7 +83,6 @@ def NMPC(x_init):
             for i in range(nx):
                 m.addConstr(x_bar[k, i] == x[k, i] - x_goal[i])
 
-        # Restrição terminal suave
         distancia_atual = np.linalg.norm(x_atual[0:2] - x_goal[0:2])
         if distancia_atual < 2.0:
             m.addQConstr(x_bar[k_pred, 0]**2 + x_bar[k_pred, 1]**2 <= 0.35**2)
@@ -92,7 +94,6 @@ def NMPC(x_init):
             u_aplicar = np.array([u[0, 0].X, u[0, 1].X])
             u_traj_real[t, :] = u_aplicar
             
-            # Checa se o slack foi ativado no primeiro passo
             if s[0].X > 1e-4:
                 print(f"[Aviso t={t}] Restrição de obstáculo suavizada! Slack s[0] = {s[0].X:.4f}")
 
@@ -106,14 +107,12 @@ def NMPC(x_init):
 
     return x_traj_real, u_traj_real, passos_executados
 
-# Parâmetros da Simulação
 T = 25          
 dt = 0.5        
 nx = 4          
 nu = 2          
 nlam = 4        
-num_rept = 1  
-k_pred = 7     
+k_pred = 7   
 
 P = 1.0
 Q = 1.0
@@ -121,33 +120,32 @@ Q = 1.0
 A = np.array([[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]])
 b0 = np.array([1.0, 1.0, 1.0, 1.0])
 
-p0 = np.array([3.0, 0.0])
+p0 = np.array([2.0, 0.0])
 vobs = np.array([-1.0, 0.0])
+p_limit = np.array([-2.0, 0.0])
 
 x_goal = np.array([5.0, 0.0, 0.0, 0.0])
+x_init = np.array([-3.0, 0.0, 0.0, 0.0])
 
-# Teste com posição inicial muito crítica
-x_init = np.array([-5.0, 0.0, 0.0, 0.0])
 print(f'Ponto inicial: [{x_init[0]:.2f}, {x_init[1]:.2f}]')   
 
 estados, acoes, passos = NMPC(x_init)
 
-# Plotagem
+# Plotagem com Posições Reais do Obstáculo
 if estados is not None:
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(estados[:, 0], estados[:, 1], 'bo-', linewidth=2, label='Trajetória Drone (NMPC)')
     ax.plot(estados[0, 0], estados[0, 1], 'gs', markersize=10, label='Drone Inicial')
 
-    # Desenha a trajetória do obstáculo em transparência ao longo do tempo
     for t_step in range(0, passos + 1, 2):
-        p_obs_t = p0 + vobs * t_step * dt
-        alpha_val = 0.2 + 0.6 * (t_step / passos) # Transparência gradativa
+        # CORREÇÃO: Utiliza a função get_p_obs para refletir o rebate no gráfico
+        p_obs_t, _ = get_p_obs(t_step, dt, p0, vobs, p_limit)
+        alpha_val = 0.2 + 0.6 * (t_step / passos)
         obs_box = patches.Rectangle((p_obs_t[0] - 1.0, p_obs_t[1] - 1.0), 2.0, 2.0, 
                                     edgecolor='red', facecolor='red', alpha=alpha_val,
                                     label='Obstáculo' if t_step == 0 else "")
         ax.add_patch(obs_box)
 
-    # Região Objetivo
     square_goal = patches.Rectangle((4.75, -0.25), 0.5, 0.5, edgecolor='black', facecolor='yellow', label='Objetivo')
     ax.add_patch(square_goal)
 
