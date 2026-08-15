@@ -101,14 +101,14 @@ if m.status == gp.GRB.OPTIMAL:
         label='Trajetória'
     )
 
-    square_init = patches.Rectangle((-5.25, -0.25), 0.5, 0.5, edgecolor='black', facecolor='green')
+    square_init = patches.Rectangle((-5.25, -0.25), 0.5, 0.5, edgecolor='black', facecolor='green', label='Estado inicial')
     ax.add_patch(square_init)
   
 
-    square_goal = patches.Rectangle((4.75, -0.25), 0.5, 0.5, edgecolor='black', facecolor='yellow')
+    square_goal = patches.Rectangle((4.75, -0.25), 0.5, 0.5, edgecolor='black', facecolor='yellow', label='Estado objetivo')
     ax.add_patch(square_goal)
 
-    square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red')
+    square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red', label='Obstáculo')
     ax.add_patch(square)
     plt.gca().set_aspect('equal', adjustable='box')  # Ensures equal aspect ratio
 
