@@ -3,13 +3,9 @@ import gurobipy as gp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
-import random
 import pandas as pd
 
-def checa(A, b, x_pos):
-    return np.all(A @ x_pos <= b)
-
-def MPC(x_init):
+def NMPC(x_init):
     x_traj_real = np.zeros((T + 1, nx))
     u_traj_real = np.zeros((T, nu))
     x_traj_real[0, :] = x_init
@@ -18,6 +14,8 @@ def MPC(x_init):
 
     for t in range(T):
         x_atual = x_traj_real[t, :]
+
+        p_obs_atual = p0 + vobs * t * dt 
         
         # Critério de parada
         if np.linalg.norm(x_atual[0:2] - x_goal[0:2]) < 0.25 and np.linalg.norm(x_atual[2:4]) < 0.40:
@@ -59,6 +57,10 @@ def MPC(x_init):
             m.addConstr(x[0, i] == x_atual[i])
 
         for k in range(k_pred):
+
+            p_obs_pred = p_obs_atual + vobs * k * dt
+
+            bk = b0 + A @ p_obs_pred
             # Integração da Dinâmica 4D
             m.addConstr(x[k + 1, 0] == x[k, 0] + x[k, 2] * dt)
             m.addConstr(x[k + 1, 1] == x[k, 1] + x[k, 3] * dt)
@@ -66,7 +68,7 @@ def MPC(x_init):
             m.addConstr(x[k + 1, 3] == x[k, 3] + u[k, 1] * dt)
             
             # 3. RESTRIÇÃO KKT SUAVIZADA COM SLACK
-            m.addConstr(gp.quicksum(-lam[k, j] * b[j] for j in range(nlam)) + 
+            m.addConstr(gp.quicksum(-lam[k, j] * bk[j] for j in range(nlam)) + 
                         mu[k, 0] * x[k, 0] + mu[k, 1] * x[k, 1] + s[k] >= 1)
 
             for i in range(nu):
@@ -78,7 +80,7 @@ def MPC(x_init):
             for i in range(nx):
                 m.addConstr(x_bar[k, i] == x[k, i] - x_goal[i])
 
-        # Restrição terminal suave (também pode receber slack se necessário)
+        # Restrição terminal suave
         distancia_atual = np.linalg.norm(x_atual[0:2] - x_goal[0:2])
         if distancia_atual < 2.0:
             m.addQConstr(x_bar[k_pred, 0]**2 + x_bar[k_pred, 1]**2 <= 0.35**2)
@@ -94,12 +96,10 @@ def MPC(x_init):
             if s[0].X > 1e-4:
                 print(f"[Aviso t={t}] Restrição de obstáculo suavizada! Slack s[0] = {s[0].X:.4f}")
 
-            # Evolução do sistema real (com inclusão de perturbação estocástica para teste de robustez)
-            ruido_vento = np.random.normal(0, 0.02, size=2) # Exemplo de perturbação externa
             x_traj_real[t + 1, 0] = x_traj_real[t, 0] + x_traj_real[t, 2] * dt
             x_traj_real[t + 1, 1] = x_traj_real[t, 1] + x_traj_real[t, 3] * dt
-            x_traj_real[t + 1, 2] = x_traj_real[t, 2] + u_aplicar[0] * dt + ruido_vento[0]
-            x_traj_real[t + 1, 3] = x_traj_real[t, 3] + u_aplicar[1] * dt + ruido_vento[1]
+            x_traj_real[t + 1, 2] = x_traj_real[t, 2] + u_aplicar[0] * dt
+            x_traj_real[t + 1, 3] = x_traj_real[t, 3] + u_aplicar[1] * dt
         else:
             print(f"Simulação falhou no passo {t} com status: {m.status}")
             return None, None, t
@@ -115,38 +115,46 @@ nlam = 4
 num_rept = 1  
 k_pred = 7     
 
-P = 0.5
+P = 1.0
 Q = 1.0
 
-A = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
-b = np.array([1, 1, 1, 1])
+A = np.array([[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]])
+b0 = np.array([1.0, 1.0, 1.0, 1.0])
+
+p0 = np.array([3.0, 0.0])
+vobs = np.array([-1.0, 0.0])
 
 x_goal = np.array([5.0, 0.0, 0.0, 0.0])
 
 # Teste com posição inicial muito crítica
-x_init = np.array([-2.0, 0.0, 0.0, 0.0])
+x_init = np.array([-5.0, 0.0, 0.0, 0.0])
 print(f'Ponto inicial: [{x_init[0]:.2f}, {x_init[1]:.2f}]')   
 
-estados, acoes, passos = MPC(x_init)
+estados, acoes, passos = NMPC(x_init)
 
 # Plotagem
 if estados is not None:
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.plot(estados[:, 0], estados[:, 1], 'bo-', linewidth=2, label='Trajetória NMPC (com Slack)')
-    ax.plot(estados[0, 0], estados[0, 1], 'gs', markersize=10, label='Inicial')
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(estados[:, 0], estados[:, 1], 'bo-', linewidth=2, label='Trajetória Drone (NMPC)')
+    ax.plot(estados[0, 0], estados[0, 1], 'gs', markersize=10, label='Drone Inicial')
 
-    square = patches.Rectangle((-1, -1), 2, 2, edgecolor='black', facecolor='red', alpha=0.7, label='Obstáculo')
-    ax.add_patch(square)
+    # Desenha a trajetória do obstáculo em transparência ao longo do tempo
+    for t_step in range(0, passos + 1, 2):
+        p_obs_t = p0 + vobs * t_step * dt
+        alpha_val = 0.2 + 0.6 * (t_step / passos) # Transparência gradativa
+        obs_box = patches.Rectangle((p_obs_t[0] - 1.0, p_obs_t[1] - 1.0), 2.0, 2.0, 
+                                    edgecolor='red', facecolor='red', alpha=alpha_val,
+                                    label='Obstáculo' if t_step == 0 else "")
+        ax.add_patch(obs_box)
 
-    square_goal = patches.Rectangle((4.75, -0.25), 0.5, 0.5, edgecolor='black', facecolor='yellow', label='Estado objetivo')
+    # Região Objetivo
+    square_goal = patches.Rectangle((4.75, -0.25), 0.5, 0.5, edgecolor='black', facecolor='yellow', label='Objetivo')
     ax.add_patch(square_goal)
-    
-    plt.gca().set_aspect('equal', adjustable='box')  # Ensures equal aspect ratio
 
-    ax.set_xlabel('Coordenada X')
-    ax.set_ylabel('Coordenada Y')
-    ax.set_title('NMPC 4D com Restrições Suaves (Slack Variables)')
+    ax.set_xlabel('Coordenada X (m)')
+    ax.set_ylabel('Coordenada Y (m)')
+    ax.set_title('NMPC 4D com Obstáculo Dinâmico e Restrições Suaves')
     ax.grid(True)
     ax.axis('equal')
-    ax.legend()
+    ax.legend(loc='upper left')
     plt.show()
