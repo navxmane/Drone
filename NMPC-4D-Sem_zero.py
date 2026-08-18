@@ -30,7 +30,7 @@ def MPC(x_init, k_pred):
         m = gp.Model(f"NMPC_Step_{t}")
         m.setParam("OutputFlag", 0) 
         m.setParam("NonConvex", 2)
-
+      
         x = m.addVars(k_pred + 1, nx, lb=-10, ub=10, name="pos")
         x_bar = m.addVars(k_pred + 1, nx, lb=-20, ub=20, name="x_bar")
         u = m.addVars(k_pred, nu, lb=-1.5, ub=1.5, name="u")
@@ -71,6 +71,7 @@ def MPC(x_init, k_pred):
 
         t0 = time.perf_counter()
         m.optimize()
+        print(f'Nós explorados: {m.NodeCount}')
         tf = time.perf_counter()
 
         if m.status == gp.GRB.OPTIMAL:
@@ -81,7 +82,9 @@ def MPC(x_init, k_pred):
                 'passo_t': t,
                 'k_pred': k_pred,
                 'tempo_solver_s': m.Runtime,
-                'tempo_wall_s': tf - t0
+                'tempo_wall_s': tf - t0,
+                'nos_explorados': m.NodeCount,
+                'gap': m.MIPGap
             })
             
             x_traj_real[t + 1, 0] = x_traj_real[t, 0] + x_traj_real[t, 2] * dt
@@ -111,7 +114,7 @@ x_init = np.array([-5.0, 0.0, 0.0, 0.0])
 x_goal = np.array([5.0, 0.0, 0.0, 0.0])
 
 # Lista de horizontes a testar
-lista_k_pred = [3, 5, 7, 10, 12]
+lista_k_pred = [12]
 
 # Dicionários e listas para armazenar os dados de todos os k_pred
 trajetorias = {}
